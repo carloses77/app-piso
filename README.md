@@ -27,4 +27,4 @@ Sin estas variables, cada móvil funciona solo en local.
 - Los datos del piso se cifran con AES-256-GCM. El servidor solo guarda blobs ilegibles.
 - El emparejamiento se hace con un QR que caduca a los 5 minutos. El servidor rechaza un tercer dispositivo.
 - La app se bloquea automáticamente al pasar a segundo plano o tras 2 minutos sin uso, y aplica un retardo progresivo tras 5 fallos.
-- Privacidad: `public/privacidad.html`. Cabeceras CSP: `public/_headers`.
+- Privacidad: `public/privacidad.html`. Cabeceras CSP: `vercel.json` (Vercel) y `public/_headers` (Netlify, Cloudflare Pages).
