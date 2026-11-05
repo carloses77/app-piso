@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { cifrarJSON, descifrarJSON, derivarClave, aleatorio, importarClaveHogar, generarClaveHogar } from '../cripto'
 import { calcularSaldo, conteoParkingMes, turnoSemana } from './calculos'
-import { db, type Pago, type Aparcamiento } from '../db'
+import { db, leerConfig, type Pago, type Aparcamiento } from '../db'
 import { guardar, aplicarRemoto, asegurarPeriodo, renovarPeriodo, periodoActivo } from '../db/operaciones'
 import { crearHogar, desbloquear, generarInvitacion, unirseConInvitacion, recuperarConClaveInicial, generarClaveInicial } from '../cripto/sesion'
 
@@ -77,6 +77,17 @@ describe('base de datos', () => {
     expect(b.rol).toBe('B')
     expect(b.hogarId).toBe(a.hogarId)
     await expect(desbloquear('claveA123')).rejects.toThrow()
+  })
+
+  it('un móvil trasladado conserva su rol y queda marcado para esperar los datos', async () => {
+    await crearHogar('claveA123', 'ABCD-EFGH-JKMN-PQRS')
+    expect(await leerConfig('unidoPorInvitacion')).toBeUndefined()
+    const inv = await generarInvitacion('claveA123')
+    await db.delete(); await db.open()
+    const a = await unirseConInvitacion(inv, 'claveNueva1', 'WXYZ-2345-6789-ABCD', 'A')
+    expect(a.rol).toBe('A')
+    expect((await desbloquear('claveNueva1')).rol).toBe('A')
+    expect(await leerConfig('unidoPorInvitacion')).toBe('1')
   })
   it('recupera el acceso con la clave inicial', async () => {
     await crearHogar('vieja-clave', 'ABCD-EFGH-JKMN-PQRS')

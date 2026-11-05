@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { LayoutDashboard, Wallet, Landmark, Sparkles, Car, Settings, type LucideIcon } from 'lucide-react'
 import { ProveedorSesion, useSesion } from './hooks/useSesion'
 import { asegurarPeriodo } from './db/operaciones'
+import { leerConfig } from './db'
 import { generarRecurrentes } from './logica/recurrentes'
 import { ProveedorToasts, useTema, vibrar } from './hooks/useAvisos'
 import { relayDisponible } from './sync/relay'
@@ -28,10 +29,11 @@ function Contenido() {
   const [actual, setActual] = useState('inicio')
 
   useEffect(() => {
-    // B espera a recibir el periodo de A; sin servidor, cada móvil crea el suyo.
+    // Quien se une con invitación espera a recibir el periodo; sin servidor, cada móvil crea el suyo.
     if (!sesion) return
     ;(async () => {
-      if (sesion.rol === 'A' || !relayDisponible()) await asegurarPeriodo()
+      const unido = (await leerConfig('unidoPorInvitacion')) === '1'
+      if ((sesion.rol === 'A' && !unido) || !relayDisponible()) await asegurarPeriodo()
       await generarRecurrentes()
     })()
   }, [sesion])

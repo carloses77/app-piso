@@ -60,6 +60,7 @@ export default function Acceso() {
   const toast = useToast()
   const [paso, setPaso] = useState<Paso>('cargando')
   const [modo, setModo] = useState<'crear' | 'unirse'>('crear')
+  const [rolUnion, setRolUnion] = useState<'A' | 'B'>('B')
   const [clave, setClave] = useState('')
   const [clave2, setClave2] = useState('')
   const [alias, setAlias] = useState('')
@@ -137,11 +138,11 @@ export default function Acceso() {
     if (!alias.trim()) return fallo('Elige un apodo para que tu compi te reconozca')
     setOcupado(true)
     try {
-      const s = modo === 'crear' ? await crearHogar(clave, claveInicial) : await unirseConInvitacion(codigo, clave, claveInicial)
+      const s = modo === 'crear' ? await crearHogar(clave, claveInicial) : await unirseConInvitacion(codigo, clave, claveInicial, rolUnion)
       await registrarDispositivo(s)
       fijarUsuario(s.rol)
       await guardar('ajustes', { id: `alias-${s.rol}`, valor: alias.trim().slice(0, 20) }, 'Alias definido')
-      if (s.rol === 'A') await asegurarPeriodo()
+      if (modo === 'crear') await asegurarPeriodo()
       history.replaceState(null, '', location.pathname)
       vibrar([15, 50, 15])
       await entrarOfreciendoBio(s, clave, alias.trim())
@@ -275,6 +276,17 @@ export default function Acceso() {
           {paso === 'perfil' && (
             <form className="tarjeta grid gap-3" onSubmit={terminarAlta}>
               <h2 className="flex items-center gap-2 text-lg font-bold"><Lock size={20} /> Crea tu usuario</h2>
+              {modo === 'unirse' && (
+                <fieldset className="grid gap-2">
+                  <legend className="mb-2 text-sm text-tinta/60">¿Quién eres en este piso? Si ya usabas la app, elige lo mismo que antes.</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([['A', 'Creé el piso'], ['B', 'Me invitaron']] as const).map(([r, texto]) => (
+                      <button key={r} type="button" aria-pressed={rolUnion === r} onClick={() => setRolUnion(r)}
+                        className={`boton text-sm ${rolUnion === r ? 'bg-marca text-white' : 'bg-superficie ring-1 ring-tinta/10'}`}>{texto}</button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <input className="campo" name="username" autoComplete="username" placeholder="Tu apodo (sin datos reales)" value={alias} onChange={(e) => setAlias(e.target.value)} maxLength={20} autoFocus />
               <CampoClave valor={clave} cambiar={setClave} placeholder="Clave definitiva (mín. 8)" nueva medidor />
               <CampoClave valor={clave2} cambiar={setClave2} placeholder="Repite la clave" nueva />

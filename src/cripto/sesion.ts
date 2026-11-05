@@ -66,7 +66,7 @@ export function leerInvitacion(codigo: string) {
   return datos
 }
 
-export async function unirseConInvitacion(codigo: string, clavePersonal: string, claveInicial: string): Promise<Sesion> {
+export async function unirseConInvitacion(codigo: string, clavePersonal: string, claveInicial: string, rol: Usuario = 'B'): Promise<Sesion> {
   const datos = leerInvitacion(codigo)
   const raw = deBase64(datos.k)
   const dispositivoId = aBase64(aleatorio(16))
@@ -74,8 +74,10 @@ export async function unirseConInvitacion(codigo: string, clavePersonal: string,
   await protegerRecuperacion(raw, claveInicial)
   await escribirConfig('hogarId', datos.h)
   await escribirConfig('dispositivoId', dispositivoId)
-  await escribirConfig('rol', 'B')
-  return { claveHogar: await importarClaveHogar(raw), hogarId: datos.h, dispositivoId, rol: 'B' }
+  await escribirConfig('rol', rol)
+  // Los datos llegan por sincronización: este móvil no debe crear un periodo vacío antes de recibirlos.
+  await escribirConfig('unidoPorInvitacion', '1')
+  return { claveHogar: await importarClaveHogar(raw), hogarId: datos.h, dispositivoId, rol }
 }
 
 export async function abrirClaveHogarRaw(clavePersonal: string) {
