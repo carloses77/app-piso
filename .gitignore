@@ -31,3 +31,5 @@ dist-ssr
 public/ocr
 .playwright-mcp
 supabase/.temp/
+.vercel
+.env*
