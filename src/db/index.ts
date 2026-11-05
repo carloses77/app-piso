@@ -26,14 +26,26 @@ export interface Limpieza extends Base { periodoId: string; zona: string; fecha:
 export interface Tarea extends Base { periodoId: string; titulo: string; estado: 'pendiente' | 'hecho'; asignadoA: Usuario | 'ambos' }
 export interface Aparcamiento extends Base { periodoId: string; fecha: string; usuario: Usuario; reserva?: boolean; nota?: string }
 export interface Ajuste extends Base { valor: string }
+export interface Extracto extends Base {
+  desde: string; hasta: string; saldoInicial?: number; saldoFinal?: number
+  nombreArchivo: string; huella: string; metodo: 'texto' | 'ocr'; trozos: number; subidoPor: Usuario
+}
+export interface MovimientoBanco extends Base {
+  extractoId: string; fecha: string; concepto: string
+  importe: number // positivo = ingreso, negativo = gasto
+  saldo?: number; dudoso?: boolean; aportadoPor?: Usuario
+  orden?: number // posición en el documento: ordena movimientos del mismo día
+  editado?: boolean // corregido a mano respecto a lo leído del PDF
+}
+export interface TrozoPdf extends Base { extractoId: string; indice: number; datos: string }
 
 export interface Historial {
   id?: number; fecha: number; entidad: string; accion: 'crear' | 'editar' | 'borrar'; usuario: Usuario; resumen: string
 }
-export interface EventoCola { id?: number; creado: number; tabla: TablaSync; registro: Base; historial: Historial }
+export interface EventoCola { id?: number; creado: number; tabla: TablaSync; registro: Base; historial?: Historial }
 export interface Config { clave: string; valor: string }
 
-export const TABLAS_SYNC = ['periodos', 'pagos', 'limpiezas', 'tareas', 'parking', 'ajustes', 'recurrentes', 'compra', 'lecturas'] as const
+export const TABLAS_SYNC = ['periodos', 'pagos', 'limpiezas', 'tareas', 'parking', 'ajustes', 'recurrentes', 'compra', 'lecturas', 'extractos', 'movimientos', 'trozosPdf'] as const
 export type TablaSync = (typeof TABLAS_SYNC)[number]
 
 export class BaseDatos extends Dexie {
@@ -46,6 +58,9 @@ export class BaseDatos extends Dexie {
   recurrentes!: EntityTable<Recurrente, 'id'>
   compra!: EntityTable<ArticuloCompra, 'id'>
   lecturas!: EntityTable<Lectura, 'id'>
+  extractos!: EntityTable<Extracto, 'id'>
+  movimientos!: EntityTable<MovimientoBanco, 'id'>
+  trozosPdf!: EntityTable<TrozoPdf, 'id'>
   historial!: EntityTable<Historial, 'id'>
   colaSync!: EntityTable<EventoCola, 'id'>
   config!: EntityTable<Config, 'clave'>
@@ -67,6 +82,11 @@ export class BaseDatos extends Dexie {
       recurrentes: 'id',
       compra: 'id, comprado',
       lecturas: 'id, tipo, fecha',
+    })
+    this.version(3).stores({
+      extractos: 'id, desde, huella',
+      movimientos: 'id, extractoId, fecha',
+      trozosPdf: 'id, extractoId',
     })
   }
 }

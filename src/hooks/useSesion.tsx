@@ -17,6 +17,13 @@ export const useSesion = () => useContext(Contexto)
 
 const INACTIVIDAD = 2 * 60 * 1000
 
+// Elegir un archivo manda la app a segundo plano y el OCR puede tardar minutos sin que se toque
+// la pantalla. Esta pausa evita perder el trabajo y caduca sola para no anular el bloqueo.
+let bloqueoPausadoHasta = 0
+export const pausarBloqueo = (ms: number) => { bloqueoPausadoHasta = Date.now() + ms }
+export const reanudarBloqueo = () => { bloqueoPausadoHasta = 0 }
+const bloqueoEnPausa = () => Date.now() < bloqueoPausadoHasta
+
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null)
   const [estadoSync, setEstadoSync] = useState('')
@@ -39,9 +46,9 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     if (!sesion) return
     const reiniciar = () => {
       clearTimeout(temporizador.current)
-      temporizador.current = window.setTimeout(bloquear, INACTIVIDAD)
+      temporizador.current = window.setTimeout(() => (bloqueoEnPausa() ? reiniciar() : bloquear()), INACTIVIDAD)
     }
-    const visibilidad = () => document.hidden && bloquear()
+    const visibilidad = () => document.hidden && !bloqueoEnPausa() && bloquear()
     const eventos = ['pointerdown', 'keydown', 'scroll']
     eventos.forEach((e) => window.addEventListener(e, reiniciar, { passive: true }))
     document.addEventListener('visibilitychange', visibilidad)

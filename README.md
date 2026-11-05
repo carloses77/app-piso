@@ -1,6 +1,11 @@
 # PisoCompartido
 
-PWA privada para 2 compañeros de piso: pagos (renta y servicios), limpieza, tareas comunes y plaza de parking compartida.
+PWA privada para 2 compañeros de piso: pagos (renta y servicios), revisión de la cuenta bancaria común, limpieza, tareas comunes y plaza de parking compartida.
+
+## Módulo de banco
+Sube el extracto semanal en PDF desde la pestaña **Banco**. La app usa el texto del PDF y aplica OCR (Tesseract) solo a las páginas escaneadas, siempre en el dispositivo. Antes de guardar se revisan los movimientos; después, ambos compañeros ven el balance, los movimientos destacados y el PDF original. Las correcciones manuales quedan marcadas y en el histórico.
+
+`predev` y `prebuild` copian los recursos de OCR a `public/ocr` (carpeta no versionada).
 
 ## Uso
 ```bash

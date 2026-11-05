@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { LayoutDashboard, Wallet, Sparkles, Car, Settings, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Wallet, Landmark, Sparkles, Car, Settings, type LucideIcon } from 'lucide-react'
 import { ProveedorSesion, useSesion } from './hooks/useSesion'
 import { asegurarPeriodo } from './db/operaciones'
 import { generarRecurrentes } from './logica/recurrentes'
@@ -9,6 +9,7 @@ import { relayDisponible } from './sync/relay'
 import Acceso from './pages/Acceso'
 import Inicio from './pages/Inicio'
 import Pagos from './pages/Pagos'
+import Banco from './pages/Banco'
 import Casa from './pages/Casa'
 import Parking from './pages/Parking'
 import Mas from './pages/Mas'
@@ -16,6 +17,7 @@ import Mas from './pages/Mas'
 const SECCIONES: { id: string; texto: string; icono: LucideIcon; Vista: (p: { ir: (s: string) => void }) => React.ReactNode }[] = [
   { id: 'inicio', texto: 'Inicio', icono: LayoutDashboard, Vista: Inicio },
   { id: 'pagos', texto: 'Pagos', icono: Wallet, Vista: Pagos },
+  { id: 'banco', texto: 'Banco', icono: Landmark, Vista: Banco },
   { id: 'casa', texto: 'Casa', icono: Sparkles, Vista: Casa },
   { id: 'parking', texto: 'Parking', icono: Car, Vista: Parking },
   { id: 'mas', texto: 'Más', icono: Settings, Vista: Mas },

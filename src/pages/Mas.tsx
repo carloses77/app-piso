@@ -22,7 +22,7 @@ import { useEffect } from 'react'
 import { Fingerprint, Bell, Plane, ImageDown, SunMoon } from 'lucide-react'
 
 const ICONO_ACCION = { crear: Plus, editar: Pencil, borrar: Minus }
-const NOMBRE_ENTIDAD: Record<string, string> = { pagos: '💶 Pagos', recurrentes: '🔁 Fijos', limpiezas: '🧽 Limpieza', tareas: '🛠️ Tareas', compra: '🛒 Compra', parking: '🚗 Parking', lecturas: '📈 Consumos', periodos: '📅 Periodos', ajustes: '⚙️ Ajustes' }
+const NOMBRE_ENTIDAD: Record<string, string> = { pagos: '💶 Pagos', extractos: '🏦 Banco', movimientos: '🧾 Movimientos',recurrentes: '🔁 Fijos', limpiezas: '🧽 Limpieza', tareas: '🛠️ Tareas', compra: '🛒 Compra', parking: '🚗 Parking', lecturas: '📈 Consumos', periodos: '📅 Periodos', ajustes: '⚙️ Ajustes' }
 
 export default function Mas() {
   const [vista, setVista] = useState<'historial' | 'consumos' | 'ajustes'>('historial')
@@ -119,7 +119,7 @@ function Ajustes() {
   }
 
   async function exportar() {
-    const datos = Object.fromEntries(await Promise.all(['periodos', 'pagos', 'limpiezas', 'tareas', 'parking', 'ajustes', 'historial']
+    const datos = Object.fromEntries(await Promise.all(['periodos', 'pagos', 'limpiezas', 'tareas', 'parking', 'ajustes', 'historial', 'extractos', 'movimientos', 'trozosPdf']
       .map(async (t) => [t, await db.table(t).toArray()])))
     const blob = new Blob([await cifrarJSON(sesion!.claveHogar, datos)], { type: 'text/plain' })
     const a = document.createElement('a')

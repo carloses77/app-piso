@@ -18,7 +18,7 @@ export async function registrarDispositivo(s: Sesion) {
   if (error) throw new Error(error.message.includes('MAX_2') ? 'Este hogar ya tiene 2 dispositivos' : error.message)
 }
 
-interface Paquete { tabla: TablaSync; registro: { id: string; actualizado: number }; historial: Historial }
+interface Paquete { tabla: TablaSync; registro: { id: string; actualizado: number }; historial?: Historial }
 
 export async function sincronizar(s: Sesion): Promise<'ok' | 'offline' | 'sin-relay'> {
   if (!relayDisponible()) return 'sin-relay'

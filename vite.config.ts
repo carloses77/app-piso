@@ -11,6 +11,16 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icono.svg', 'privacidad.html'],
+      workbox: {
+        // El OCR pesa varios MB: se descarga la primera vez que hace falta y luego funciona sin conexión.
+        globIgnores: ['ocr/**'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        runtimeCaching: [{
+          urlPattern: ({ url }) => url.pathname.includes('/ocr/'),
+          handler: 'CacheFirst',
+          options: { cacheName: 'recursos-ocr', cacheableResponse: { statuses: [200] } },
+        }],
+      },
       manifest: {
         name: 'PisoCompartido',
         short_name: 'Piso',
