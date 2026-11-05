@@ -15,6 +15,8 @@ export interface Pago extends Base {
   pagadoPor: Usuario; partePagador: number // % que asume quien paga (50 = mitad)
   saldado: boolean
   foto?: string // ticket comprimido (dataURL), viaja cifrado
+  lineasTicket?: { concepto: string; importe: number }[] // solo lo compartido; suma el importe del pago
+  totalTicket?: number // total impreso, que incluye lo personal
   recurrenteId?: string
 }
 export interface Recurrente extends Base {

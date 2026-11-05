@@ -69,6 +69,18 @@ async function lineasDeTexto(pagina: PaginaPdf, desplazamiento: number) {
 
 type TrabajadorOcr = Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>>
 
+export async function crearOcr(logger?: (m: { status: string; progress: number }) => void): Promise<TrabajadorOcr> {
+  const { createWorker, OEM } = await import('tesseract.js')
+  return createWorker('spa', OEM.LSTM_ONLY, {
+    workerPath: `${RECURSOS}/worker.min.js`,
+    corePath: RECURSOS,
+    langPath: RECURSOS,
+    workerBlobURL: false,
+    gzip: true,
+    ...(logger ? { logger } : {}),
+  })
+}
+
 async function lineasDeOcr(pagina: PaginaPdf, ocr: TrabajadorOcr, desplazamiento: number): Promise<LineaPdf[]> {
   const canvas = document.createElement('canvas')
   await pintarPagina(pagina, canvas, ESCALA_OCR)
@@ -107,16 +119,7 @@ export async function extraerLineas(datos: Uint8Array, avisar: (p: Progreso) => 
       }
       usoOcr = true
       avisar({ texto: `Aplicando OCR a la página ${n} de ${doc.numPages}…`, porcentaje: Math.max(5, base) })
-      if (!ocr) {
-        const { createWorker, OEM } = await import('tesseract.js')
-        ocr = await createWorker('spa', OEM.LSTM_ONLY, {
-          workerPath: `${RECURSOS}/worker.min.js`,
-          corePath: RECURSOS,
-          langPath: RECURSOS,
-          workerBlobURL: false,
-          gzip: true,
-        })
-      }
+      if (!ocr) ocr = await crearOcr()
       lineas.push(...(await lineasDeOcr(pagina, ocr, desplazamiento)))
       desplazamiento += altoPagina
     }

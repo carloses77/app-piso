@@ -7,6 +7,9 @@ Sube el extracto semanal en PDF desde la pestaña **Banco**. La app usa el texto
 
 `predev` y `prebuild` copian los recursos de OCR a `public/ocr` (carpeta no versionada).
 
+## Tickets
+En **Pagos**, el botón **Ticket** lee la foto con OCR en el propio dispositivo. Cada línea se puede corregir y desmarcar si es personal: el pago registra solo la suma de lo compartido. La foto se conserva como comprobante, por lo que el compañero también puede ver lo personal que aparezca en ella.
+
 ## Uso
 ```bash
 npm install
