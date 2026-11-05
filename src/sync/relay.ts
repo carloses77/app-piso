@@ -18,6 +18,30 @@ export async function registrarDispositivo(s: Sesion) {
   if (error) throw new Error(error.message.includes('MAX_2') ? 'Este hogar ya tiene 2 dispositivos' : error.message)
 }
 
+const TABLAS_CON_AVISO: TablaSync[] = ['tareas', 'limpiezas']
+const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+
+/** Suscribe este móvil a los avisos push. Se puede repetir: la suscripción se actualiza. */
+export async function activarPush(s: Sesion): Promise<boolean> {
+  if (!relayDisponible() || !vapid || !('PushManager' in window) || Notification.permission !== 'granted') return false
+  const reg = await navigator.serviceWorker?.getRegistration()
+  if (!reg) return false
+  const clave = Uint8Array.from(atob(vapid.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))
+  const sub = await reg.pushManager.getSubscription() ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: clave })
+  const { endpoint, keys } = sub.toJSON()
+  const { error } = await sb().rpc('guardar_suscripcion_push', {
+    p_hogar: s.hogarId, p_dispositivo: s.dispositivoId, p_endpoint: endpoint, p_p256dh: keys?.p256dh, p_auth: keys?.auth,
+  })
+  return !error
+}
+
+/** Avisa al otro móvil. Si falla queda pendiente y se reintenta en la siguiente sincronización. */
+async function enviarAvisoPendiente(s: Sesion) {
+  if (!(await leerConfig('avisoPendiente'))) return
+  const { error } = await sb().functions.invoke('avisar-cambio', { body: { hogar: s.hogarId, dispositivo: s.dispositivoId } })
+  if (!error) await db.config.delete('avisoPendiente')
+}
+
 interface Paquete { tabla: TablaSync; registro: { id: string; actualizado: number }; historial?: Historial }
 
 export async function sincronizar(s: Sesion): Promise<'ok' | 'offline' | 'sin-relay'> {
@@ -29,8 +53,10 @@ export async function sincronizar(s: Sesion): Promise<'ok' | 'offline' | 'sin-re
     const payload = await cifrarJSON(s.claveHogar, { tabla: ev.tabla, registro: ev.registro, historial: ev.historial })
     const { error } = await sb().rpc('publicar_evento', { p_hogar: s.hogarId, p_dispositivo: s.dispositivoId, p_payload: payload })
     if (error) return 'offline'
+    if (TABLAS_CON_AVISO.includes(ev.tabla)) await escribirConfig('avisoPendiente', '1')
     await db.colaSync.delete(ev.id!)
   }
+  await enviarAvisoPendiente(s).catch(() => undefined)
   // 2. Bajar lo nuevo del otro dispositivo
   const desde = Number((await leerConfig('ultimoSeq')) ?? 0)
   const { data, error } = await sb().rpc('leer_eventos', { p_hogar: s.hogarId, p_dispositivo: s.dispositivoId, p_desde: desde })

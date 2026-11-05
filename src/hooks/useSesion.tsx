@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Sesion } from '../cripto/sesion'
 import { fijarUsuario } from '../db/operaciones'
-import { sincronizar } from '../sync/relay'
+import { activarPush, sincronizar } from '../sync/relay'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Usuario } from '../db'
 
@@ -64,6 +64,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!sesion) return
     sincronizarYa()
+    activarPush(sesion).catch(() => undefined)
     const i = setInterval(sincronizarYa, 20_000)
     window.addEventListener('online', sincronizarYa)
     return () => {

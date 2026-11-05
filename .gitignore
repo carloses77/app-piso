@@ -30,3 +30,4 @@ dist-ssr
 .claude
 public/ocr
 .playwright-mcp
+supabase/.temp/

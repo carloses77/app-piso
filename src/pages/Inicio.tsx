@@ -2,7 +2,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip
 import { LayoutDashboard, Scale, Wallet, Car, Sparkles, CalendarClock, RefreshCw } from 'lucide-react'
 import { useDatosPeriodo } from '../hooks/useDatos'
 import { useAlias, useSesion } from '../hooks/useSesion'
-import { calcularSaldo, gastosPorTipo, conteoParkingMes, mesActual, eur, ZONAS, turnoSemana } from '../logica/calculos'
+import { calcularSaldo, gastosPorTipo, conteoParkingMes, mesActual, eur, ZONAS, turnoSemana, lunesIso } from '../logica/calculos'
 import { Avatar, Cabecera, ICONO_PAGO, TarjetaKPI, colorUsuario } from '../components/comunes'
 import { db, type TipoPago } from '../db'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -35,7 +35,10 @@ export default function Inicio({ ir }: { ir: (s: string) => void }) {
   const tipos = gastosPorTipo(pagosMes)
   const park = conteoParkingMes(d.parking, mes)
   const hoy = new Date()
-  const misZonas = ZONAS.filter((_, i) => turnoSemana(hoy, i, ausencias) === yo)
+  const misZonas = ZONAS.filter((z, i) => {
+    const registro = d.limpiezas.find((l) => l.zona === z && l.fecha === lunesIso(hoy))
+    return (registro?.asignadoA ?? turnoSemana(hoy, i, ausencias)) === yo
+  })
   const racha = puntosLimpieza(d.limpiezas, yo)
   const diasRestantes = d.periodo ? Math.ceil((new Date(d.periodo.fin).getTime() - hoy.getTime()) / 864e5) : 0
 

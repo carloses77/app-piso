@@ -60,6 +60,20 @@ describe('avisos', () => {
   })
 })
 
+describe('avisos de limpieza reasignada', () => {
+  it('sigue a quien tiene la zona asignada, no al turno calculado', () => {
+    const hoy = new Date('2026-11-05T10:00')
+    const sem = lunesIso(hoy)
+    const base = { alias, hoy, pagos: [], compra: [], ausencias: {}, recurrentes: [], parking: [] }
+    const zona = 'Cocina'
+    const turno = turnoSemana(hoy, 0, {})
+    const otro = turno === 'A' ? 'B' as const : 'A' as const
+    const limpiezas: Limpieza[] = [{ id: 'l', actualizado: 0, periodoId: 'x', zona, fecha: sem, asignadoA: otro, hecho: false }]
+    expect(calcularAvisos({ ...base, yo: otro, limpiezas }).find((a) => a.id === 'limpieza')?.texto).toContain(zona)
+    expect(calcularAvisos({ ...base, yo: turno, limpiezas }).find((a) => a.id === 'limpieza')?.texto ?? '').not.toContain(zona)
+  })
+})
+
 describe('contadores', () => {
   it('calcula el consumo entre lecturas', () => {
     const l = (fecha: string, valor: number) => ({ id: fecha, actualizado: 0, tipo: 'luz' as const, fecha, valor })

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, CookingPot, Bath, Sofa, Trash, CheckCircle2, Circle, Plus, ListTodo, Trash2, ShoppingCart, Flame, Plane, type LucideIcon } from 'lucide-react'
+import { Sparkles, CookingPot, Bath, Sofa, Trash, CheckCircle2, Circle, Plus, ListTodo, Trash2, ShoppingCart, Flame, Plane, Pencil, ArrowLeftRight, Check, X, type LucideIcon } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatosPeriodo } from '../hooks/useDatos'
 import { useAlias, useSesion } from '../hooks/useSesion'
@@ -9,7 +9,7 @@ import { useToast, vibrar } from '../hooks/useAvisos'
 import { guardar, borrar } from '../db/operaciones'
 import { Avatar, Cabecera, Segmentos, Vacio, colorUsuario } from '../components/comunes'
 import { ZONAS, turnoSemana, lunesIso, puntosLimpieza, INSIGNIAS, estaAusente, isoDia } from '../logica/calculos'
-import { db, type Usuario } from '../db'
+import { db, type Tarea, type Usuario } from '../db'
 
 const ICONO_ZONA: Record<string, LucideIcon> = { Cocina: CookingPot, Baño: Bath, Salón: Sofa, Basura: Trash }
 const CATEGORIAS = [
@@ -54,6 +54,17 @@ function Limpieza() {
     if (!ya?.hecho) { vibrar([10, 30, 10]); toast({ tipo: 'ok', texto: `${zona} limpia · +10 puntos` }) }
   }
 
+  async function reasignar(zona: string, fecha: Date, idx: number) {
+    if (!d?.periodo) return
+    const sem = lunesIso(fecha)
+    const ya = hecha(zona, sem)
+    const otro: Usuario = (ya?.asignadoA ?? turnoSemana(fecha, idx, ausencias)) === 'A' ? 'B' : 'A'
+    const resumen = `${zona}: ahora le toca a ${alias[otro]}`
+    if (ya) await guardar('limpiezas', { ...ya, asignadoA: otro }, resumen)
+    else await guardar('limpiezas', { periodoId: d.periodo.id, zona, fecha: sem, asignadoA: otro, hecho: false }, resumen)
+    toast({ tipo: 'ok', texto: resumen })
+  }
+
   const stats = { A: puntosLimpieza(d.limpiezas, 'A'), B: puntosLimpieza(d.limpiezas, 'B') }
   const lider: Usuario | null = stats.A.puntos === stats.B.puntos ? null : stats.A.puntos > stats.B.puntos ? 'A' : 'B'
 
@@ -93,15 +104,19 @@ function Limpieza() {
               const quien = registro?.asignadoA ?? turnoSemana(fecha, i, ausencias)
               const ok = registro?.hecho
               return (
-                <motion.button key={z} whileTap={si === 0 ? { scale: 0.95 } : undefined} onClick={() => alternar(z, fecha, i)} disabled={si > 0}
+                <div key={z} className={`flex items-stretch rounded-2xl border-2 transition-colors ${ok ? 'border-b bg-b/10' : 'border-transparent bg-fondo'}`}>
+                <motion.button whileTap={si === 0 ? { scale: 0.95 } : undefined} onClick={() => alternar(z, fecha, i)} disabled={si > 0}
                   aria-pressed={!!ok}
-                  className={`flex min-h-14 items-center gap-2 rounded-2xl border-2 p-2 text-left transition-colors ${ok ? 'border-b bg-b/10' : 'border-transparent bg-fondo'}`}>
+                  className="flex min-h-14 min-w-0 flex-1 items-center gap-2 p-2 text-left">
                   <Icono size={22} className="shrink-0 text-marca" />
                   <span className="min-w-0 flex-1 text-sm font-semibold">{z}<br /><small className="font-normal" style={{ color: colorUsuario(quien) }}>{alias[quien]}</small></span>
                   {si === 0 && (ok
                     ? <motion.span initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: 'spring', duration: 0.25, bounce: 0.4 }}><CheckCircle2 className="text-b" /></motion.span>
                     : <Circle className="text-tinta/20" />)}
                 </motion.button>
+                <button type="button" aria-label={`Pasar ${z} a ${alias[quien === 'A' ? 'B' : 'A']}`} className="grid w-9 shrink-0 place-items-center text-tinta/40"
+                  onClick={() => reasignar(z, fecha, i)}><ArrowLeftRight size={15} /></button>
+                </div>
               )
             })}
           </div>
@@ -151,19 +166,8 @@ function Tareas() {
                 <AnimatePresence initial={false}>
                   {xs.map((t) => (
                     <motion.li key={t.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                      className="tarjeta flex items-center gap-3 !p-3">
-                      <button aria-label="Cambiar estado" className="boton size-10 p-0" onClick={() => {
-                        if (t.estado === 'pendiente') vibrar([10, 30, 10])
-                        guardar('tareas', { ...t, estado: t.estado === 'hecho' ? 'pendiente' : 'hecho' }, `Tarea ${t.estado === 'hecho' ? 'reabierta' : 'hecha'}: ${t.titulo}`)
-                      }}>
-                        {t.estado === 'hecho' ? <CheckCircle2 className="text-b" /> : <Circle className="text-tinta/25" />}
-                      </button>
-                      <span className={`flex-1 ${t.estado === 'hecho' ? 'text-tinta/40 line-through' : 'font-semibold'}`}>{t.titulo}</span>
-                      {t.asignadoA !== 'ambos' && <Avatar u={t.asignadoA} nombre={alias[t.asignadoA]} tam={24} />}
-                      <button aria-label="Borrar tarea" className="boton size-10 p-0 text-tinta/30" onClick={() => {
-                        borrar('tareas', t.id, `Tarea borrada: ${t.titulo}`)
-                        toast({ tipo: 'ok', texto: 'Tarea borrada', deshacer: () => guardar('tareas', { ...t, borrado: false }, `Tarea restaurada: ${t.titulo}`) })
-                      }}><Trash2 size={18} /></button>
+                      className="tarjeta !p-3">
+                      <FilaTarea t={t} />
                     </motion.li>
                   ))}
                 </AnimatePresence>
@@ -173,6 +177,59 @@ function Tareas() {
         })
       )}
     </>
+  )
+}
+
+function FilaTarea({ t }: { t: Tarea }) {
+  const alias = useAlias()
+  const toast = useToast()
+  const [edicion, setEdicion] = useState<{ titulo: string; asignadoA: Tarea['asignadoA'] }>()
+
+  if (edicion) {
+    const nombre = (u: Tarea['asignadoA']) => (u === 'ambos' ? 'ambos' : alias[u])
+    return (
+      <form className="grid gap-2" onSubmit={async (e) => {
+        e.preventDefault()
+        const titulo = edicion.titulo.trim()
+        if (!titulo) return toast({ tipo: 'error', texto: 'Ponle un nombre a la tarea' })
+        if (titulo !== t.titulo || edicion.asignadoA !== t.asignadoA) {
+          await guardar('tareas', { ...t, titulo, asignadoA: edicion.asignadoA }, `Tarea cambiada: ${titulo} (${nombre(edicion.asignadoA)})`)
+          toast({ tipo: 'ok', texto: 'Tarea actualizada' })
+        }
+        setEdicion(undefined)
+      }}>
+        <input className="campo" aria-label="Nombre de la tarea" value={edicion.titulo} maxLength={60} autoFocus onChange={(e) => setEdicion({ ...edicion, titulo: e.target.value })} />
+        <div className="flex items-center gap-2 text-xs">
+          {(['ambos', 'A', 'B'] as const).map((u) => (
+            <button type="button" key={u} onClick={() => setEdicion({ ...edicion, asignadoA: u })} aria-pressed={edicion.asignadoA === u}
+              className={`min-h-9 min-w-0 truncate rounded-full px-3 font-semibold ${edicion.asignadoA === u ? 'bg-marca text-white' : 'bg-marca-suave'}`}>
+              {u === 'ambos' ? '👥 Ambos' : alias[u]}
+            </button>
+          ))}
+          <span className="flex-1" />
+          <button type="button" aria-label="Cancelar" className="boton size-10 shrink-0 p-0 text-tinta/40" onClick={() => setEdicion(undefined)}><X size={18} /></button>
+          <button aria-label="Guardar tarea" className="boton size-10 shrink-0 bg-marca p-0 text-white"><Check size={18} /></button>
+        </div>
+      </form>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button aria-label="Cambiar estado" className="boton size-10 shrink-0 p-0" onClick={() => {
+        if (t.estado === 'pendiente') vibrar([10, 30, 10])
+        guardar('tareas', { ...t, estado: t.estado === 'hecho' ? 'pendiente' : 'hecho' }, `Tarea ${t.estado === 'hecho' ? 'reabierta' : 'hecha'}: ${t.titulo}`)
+      }}>
+        {t.estado === 'hecho' ? <CheckCircle2 className="text-b" /> : <Circle className="text-tinta/25" />}
+      </button>
+      <span className={`min-w-0 flex-1 ${t.estado === 'hecho' ? 'text-tinta/40 line-through' : 'font-semibold'}`}>{t.titulo}</span>
+      {t.asignadoA !== 'ambos' && <Avatar u={t.asignadoA} nombre={alias[t.asignadoA]} tam={24} />}
+      <button aria-label="Editar tarea" className="boton size-10 shrink-0 p-0 text-tinta/40" onClick={() => setEdicion({ titulo: t.titulo, asignadoA: t.asignadoA })}><Pencil size={17} /></button>
+      <button aria-label="Borrar tarea" className="boton size-10 shrink-0 p-0 text-tinta/30" onClick={() => {
+        borrar('tareas', t.id, `Tarea borrada: ${t.titulo}`)
+        toast({ tipo: 'ok', texto: 'Tarea borrada', deshacer: () => guardar('tareas', { ...t, borrado: false }, `Tarea restaurada: ${t.titulo}`) })
+      }}><Trash2 size={18} /></button>
+    </div>
   )
 }
 

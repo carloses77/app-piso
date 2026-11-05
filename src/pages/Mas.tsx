@@ -14,6 +14,7 @@ import { cifrarJSON } from '../cripto'
 import Contadores from './Contadores'
 import { useToast, useTema, type Tema } from '../hooks/useAvisos'
 import { useAusencias } from '../hooks/useAjustes'
+import { activarPush } from '../sync/relay'
 import { generarResumenPng, compartirImagen } from '../logica/resumen'
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../cripto/biometria'
 import { abrirClaveHogarRaw } from '../cripto/sesion'
@@ -148,7 +149,9 @@ function Ajustes() {
     if (!('Notification' in window)) return toast({ tipo: 'error', texto: 'Instala la app en la pantalla de inicio para recibir avisos' })
     const r = await Notification.requestPermission()
     setNotif(r)
-    toast({ tipo: r === 'granted' ? 'ok' : 'error', texto: r === 'granted' ? 'Avisos activados' : 'Avisos bloqueados en el sistema' })
+    if (r !== 'granted') return toast({ tipo: 'error', texto: 'Avisos bloqueados en el sistema' })
+    const push = await activarPush(sesion!).catch(() => false)
+    toast(push ? { tipo: 'ok', texto: 'Avisos activados' } : { tipo: 'error', texto: 'Avisos locales activos, pero no se pudo activar el push' })
   }
 
   async function guardarAusencia(e: React.FormEvent) {
@@ -192,7 +195,7 @@ function Ajustes() {
         <Fila icono={Plane} texto="Modo vacaciones"
           sub={ausencias[yo] && ausencias[yo]!.hasta >= isoDia() ? `Fuera del ${ausencias[yo]!.desde} al ${ausencias[yo]!.hasta}${estaAusente(ausencias[yo], isoDia()) ? ' · ahora' : ''}` : 'Tu compi cubre tus turnos de limpieza'}
           onClick={() => { setMsg(''); setHoja('ausente') }} />
-        <Fila icono={Bell} texto="Avisos" sub={notif === 'granted' ? 'Activados: vencimientos y turnos' : 'Recordatorios de pagos y limpieza'} onClick={pedirNotificaciones} />
+        <Fila icono={Bell} texto="Avisos" sub={notif === 'granted' ? 'Activados: vencimientos, turnos y cambios de tu compi' : 'Recordatorios y cambios de tu compi'} onClick={pedirNotificaciones} />
         <Fila icono={Fingerprint} texto="Face ID / huella"
           sub={bio.activa ? 'Activado · toca para desactivar' : bio.disponible ? 'Desbloquea sin escribir la clave' : 'No disponible en este dispositivo'}
           onClick={async () => {

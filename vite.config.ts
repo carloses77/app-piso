@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icono.svg', 'privacidad.html'],
       workbox: {
+        importScripts: ['sw-push.js'],
         // El OCR pesa varios MB: se descarga la primera vez que hace falta y luego funciona sin conexión.
         globIgnores: ['ocr/**'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

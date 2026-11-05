@@ -25,7 +25,10 @@ export function calcularAvisos(p: {
 
   // Zonas de limpieza de esta semana aún sin hacer (a partir del jueves)
   const sem = lunesIso(hoy)
-  const pendientes = ZONAS.filter((z, i) => turnoSemana(hoy, i, p.ausencias) === p.yo && !p.limpiezas.some((l) => l.zona === z && l.fecha === sem && l.hecho))
+  const pendientes = ZONAS.filter((z, i) => {
+    const registro = p.limpiezas.find((l) => l.zona === z && l.fecha === sem && !l.borrado)
+    return (registro?.asignadoA ?? turnoSemana(hoy, i, p.ausencias)) === p.yo && !registro?.hecho
+  })
   if (pendientes.length && (hoy.getDay() >= 4 || hoy.getDay() === 0))
     r.push({ id: 'limpieza', emoji: '🧽', destino: 'casa', urgente: hoy.getDay() === 0, texto: `Te queda limpiar: ${pendientes.join(', ')}` })
 

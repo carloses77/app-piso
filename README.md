@@ -10,6 +10,18 @@ Sube el extracto semanal en PDF desde la pestaña **Banco**. La app usa el texto
 ## Tickets
 En **Pagos**, el botón **Ticket** lee la foto con OCR en el propio dispositivo. Cada línea se puede corregir y desmarcar si es personal: el pago registra solo la suma de lo compartido. La foto se conserva como comprobante, por lo que el compañero también puede ver lo personal que aparezca en ella.
 
+## Actividades y avisos push
+En **Casa** se puede cambiar el responsable de cualquier zona de limpieza (también en semanas futuras) y editar el nombre y la asignación de las tareas. Cada cambio en tareas o limpieza avisa por push al otro móvil. El mensaje es genérico: como los datos van cifrados, el detalle solo se ve al abrir la app.
+
+Para activarlo:
+```bash
+npx web-push generate-vapid-keys
+supabase db push
+supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:tu@correo
+supabase functions deploy avisar-cambio
+```
+Añade `VITE_VAPID_PUBLIC_KEY` al entorno de la app y publícala de nuevo. Cada usuario debe activar **Más → Avisos**; en iPhone hace falta iOS 16.4 o superior y tener la app añadida a la pantalla de inicio.
+
 ## Uso
 ```bash
 npm install
