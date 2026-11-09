@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import QRCode from 'qrcode'
 import { Settings, History, QrCode, RotateCw, Download, KeyRound, Trash2, Shield, Lock, Plus, Pencil, Minus, Cloud, CloudOff } from 'lucide-react'
-import { db, type Historial } from '../db'
+import { db, TABLAS_SYNC, type Historial } from '../db'
 import { useAlias, useSesion } from '../hooks/useSesion'
+import { useBotonSync } from '../hooks/useBotonSync'
 import { useDatosPeriodo } from '../hooks/useDatos'
 import { guardar, renovarPeriodo } from '../db/operaciones'
 import { Avatar, Cabecera, Hoja, Segmentos, Vacio } from '../components/comunes'
 import { calcularSaldo, eur } from '../logica/calculos'
 import { borrarTodoLocal, cambiarClave, generarInvitacion } from '../cripto/sesion'
-import { borrarHogarRemoto, relayDisponible } from '../sync/relay'
+import { borrarHogarRemoto, ETIQUETA_SYNC, relayDisponible } from '../sync/relay'
 import { cifrarJSON } from '../cripto'
 import Contadores from './Contadores'
 import { useToast, useTema, type Tema } from '../hooks/useAvisos'
@@ -81,6 +82,7 @@ function HistorialVista() {
 
 function Ajustes() {
   const { sesion, bloquear, estadoSync } = useSesion()
+  const { sincronizarAhora } = useBotonSync()
   const alias = useAlias()
   const d = useDatosPeriodo()
   const periodos = useLiveQuery(() => db.periodos.orderBy('inicio').reverse().toArray(), []) ?? []
@@ -120,13 +122,14 @@ function Ajustes() {
   }
 
   async function exportar() {
-    const datos = Object.fromEntries(await Promise.all(['periodos', 'pagos', 'limpiezas', 'tareas', 'parking', 'ajustes', 'historial', 'extractos', 'movimientos', 'trozosPdf']
+    const datos = Object.fromEntries(await Promise.all([...TABLAS_SYNC, 'historial']
       .map(async (t) => [t, await db.table(t).toArray()])))
     const blob = new Blob([await cifrarJSON(sesion!.claveHogar, datos)], { type: 'text/plain' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `piso-backup-${new Date().toISOString().slice(0, 10)}.cifrado`
     a.click()
+    toast({ tipo: 'ok', texto: 'Copia cifrada descargada' })
   }
 
   async function activarBio(e: React.FormEvent) {
@@ -141,8 +144,12 @@ function Ajustes() {
   async function exportarResumen() {
     if (!d) return
     const mes = mesActual()
-    const blob = await generarResumenPng({ mes, pagos: d.pagos, parking: d.parking, limpiezas: d.limpiezas, alias })
-    await compartirImagen(blob, `resumen-piso-${mes}.png`)
+    try {
+      const blob = await generarResumenPng({ mes, pagos: d.pagos, parking: d.parking, limpiezas: d.limpiezas, alias })
+      await compartirImagen(blob, `resumen-piso-${mes}.png`)
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') toast({ tipo: 'error', texto: 'No se pudo generar el resumen' })
+    }
   }
 
   async function pedirNotificaciones() {
@@ -231,7 +238,7 @@ function Ajustes() {
         <Fila icono={Download} texto="Exportar copia cifrada" sub="Solo se puede leer con la clave del piso" onClick={exportar} />
         <Fila icono={Lock} texto="Bloquear ahora" onClick={bloquear} />
         <Fila icono={relayDisponible() ? Cloud : CloudOff} texto="Sincronización"
-          sub={relayDisponible() ? `Cifrada de extremo a extremo · ${estadoSync || '—'}` : 'Solo local (sin servidor configurado)'} onClick={() => {}} />
+          sub={relayDisponible() ? `Cifrada · ${ETIQUETA_SYNC[estadoSync] ?? estadoSync} · toca para sincronizar` : 'Solo local (sin servidor configurado)'} onClick={sincronizarAhora} />
         <Fila icono={Shield} texto="Privacidad" sub="Sin datos personales ni rastreo" onClick={() => window.open('/privacidad.html', '_blank')} />
         <Fila icono={Trash2} texto="Borrar todos los datos" peligro onClick={borrarTodo} />
       </section>
@@ -241,7 +248,10 @@ function Ajustes() {
           <div className="grid justify-items-center gap-3 text-center">
             <img src={qr.img} alt="Código QR de invitación" className="rounded-2xl bg-superficie p-2" />
             <p className="text-sm text-tinta/60">Escanéalo con la cámara del otro móvil. Caduca en 5 minutos.</p>
-            <button className="boton bg-superficie text-sm" onClick={() => navigator.clipboard?.writeText(qr.codigo)}>Copiar código</button>
+            <button className="boton bg-superficie text-sm" onClick={async () => {
+              try { await navigator.clipboard.writeText(qr.codigo); toast({ tipo: 'ok', texto: 'Código copiado' }) }
+              catch { toast({ tipo: 'error', texto: 'No se pudo copiar: escanea el QR' }) }
+            }}>Copiar código</button>
           </div>
         ) : (
           <form onSubmit={invitar} className="grid gap-3">

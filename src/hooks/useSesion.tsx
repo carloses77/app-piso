@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Sesion } from '../cripto/sesion'
-import { fijarUsuario } from '../db/operaciones'
-import { activarPush, sincronizar } from '../sync/relay'
+import { asegurarPeriodo, fijarUsuario } from '../db/operaciones'
+import { generarRecurrentes } from '../logica/recurrentes'
+import { activarPush, sincronizar, type ResultadoSync } from '../sync/relay'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Usuario } from '../db'
 
@@ -10,7 +11,7 @@ interface Ctx {
   entrar: (s: Sesion) => void
   bloquear: () => void
   estadoSync: string
-  sincronizarYa: () => void
+  sincronizarYa: () => Promise<ResultadoSync | undefined>
 }
 const Contexto = createContext<Ctx>(null!)
 export const useSesion = () => useContext(Contexto)
@@ -28,6 +29,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null)
   const [estadoSync, setEstadoSync] = useState('')
   const temporizador = useRef<number>(0)
+  const recurrentesDe = useRef<Sesion | null>(null)
 
   const bloquear = useCallback(() => setSesion(null), [])
   const entrar = (s: Sesion) => {
@@ -36,10 +38,30 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   }
 
   const sincronizarYa = useCallback(async () => {
-    if (!sesion) return
+    if (!sesion) return undefined
     setEstadoSync('sincronizando')
-    setEstadoSync(await sincronizar(sesion))
+    const r = await sincronizar(sesion)
+    // Solo tras descargarlo todo: antes se crearían un periodo vacío o pagos que pisarían los del otro móvil.
+    if (r.estado === 'ok') {
+      try {
+        if (sesion.rol === 'A') await asegurarPeriodo()
+        if (recurrentesDe.current !== sesion) {
+          recurrentesDe.current = sesion
+          await generarRecurrentes()
+        }
+      } catch { /* se reintenta en la siguiente sincronización */ }
+    }
+    setEstadoSync(r.estado)
+    return r
   }, [sesion])
+
+  // Lo que se guarda aquí se envía enseguida, sin esperar a la sincronización periódica.
+  const pendientes = useLiveQuery(() => (sesion ? db.colaSync.count() : 0), [sesion]) ?? 0
+  useEffect(() => {
+    if (!sesion || !pendientes) return
+    const t = setTimeout(sincronizarYa, 400)
+    return () => clearTimeout(t)
+  }, [pendientes, sesion, sincronizarYa])
 
   // Bloqueo al pasar a segundo plano y por inactividad
   useEffect(() => {
@@ -60,12 +82,12 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     }
   }, [sesion, bloquear])
 
-  // Sincronización periódica cada 20 s mientras está desbloqueada
+  // Sincronización periódica mientras está desbloqueada
   useEffect(() => {
     if (!sesion) return
     sincronizarYa()
     activarPush(sesion).catch(() => undefined)
-    const i = setInterval(sincronizarYa, 20_000)
+    const i = setInterval(sincronizarYa, 10_000)
     window.addEventListener('online', sincronizarYa)
     return () => {
       clearInterval(i)

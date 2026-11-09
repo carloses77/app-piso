@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aNumero, interpretarTicket, sumaLineas } from './ticket'
+import { aNumero, calidadLectura, cuadraTicket, interpretarTicket, sumaLineas } from './ticket'
 
 const HOY = '2026-11-05'
 
@@ -59,6 +59,51 @@ IVA 10% 0,35`, HOY)
 
   it('no inventa nada de un texto ilegible', () => {
     expect(interpretarTicket('~~ |||\n\n..', HOY)).toEqual({ fecha: undefined, lineas: [] })
+  })
+})
+
+describe('errores frecuentes en fotos reales', () => {
+  it('corrige letras leídas dentro del importe', () => {
+    const { lineas } = interpretarTicket('LECHE l,50\nPAN 1,S0\nHUEVOS 2.B0\nTOTAL 5,80', HOY)
+    expect(lineas.map((l) => l.importe)).toEqual([1.5, 1.5, 2.8])
+  })
+
+  it('acepta otros separadores y ruido al final de la fila', () => {
+    const { lineas } = interpretarTicket("LECHE 0'85 |\nPAN 1,20 _\nFRUTA 2,10 10%\nTOTAL 4,15 ;", HOY)
+    expect(lineas.map((l) => l.importe)).toEqual([0.85, 1.2, 2.1])
+  })
+
+  it('recupera la coma perdida solo dentro de los productos', () => {
+    const t = interpretarTicket('MAYOR 12 08\nLECHE 0,85\nPAN 1 20\nTOTAL 2,05', HOY)
+    expect(t.lineas).toEqual([{ concepto: 'LECHE', importe: 0.85 }, { concepto: 'PAN', importe: 1.2 }])
+  })
+
+  it('lee el total aunque la cantidad esté en la fila siguiente', () => {
+    const t = interpretarTicket('LECHE 0,85\nTOTAL COMPRA\n0,85\nOTRA COSA 9,99', HOY)
+    expect(t.lineas).toHaveLength(1)
+    expect(t.total).toBe(0.85)
+  })
+
+  it('no se detiene en "SUB TOTAL" y entiende "A PAGAR"', () => {
+    const t = interpretarTicket('LECHE 0,85\nSUB TOTAL 0,85\nPAN 1,00\nA PAGAR 1,85', HOY)
+    expect(t.lineas).toHaveLength(2)
+    expect(t.total).toBe(1.85)
+  })
+
+  it('usa el cobro con tarjeta si no hay total legible', () => {
+    expect(interpretarTicket('LECHE 0,85\nTARJETA 0,85', HOY).total).toBe(0.85)
+  })
+
+  it('no toma la hora ni la cabecera como producto', () => {
+    const t = interpretarTicket('C/ MAYOR 1\n03/11/2026 18.30\nLECHE 0,85\nTOTAL 0,85', HOY)
+    expect(t.lineas).toEqual([{ concepto: 'LECHE', importe: 0.85 }])
+  })
+
+  it('prefiere la lectura cuyas líneas suman el total', () => {
+    const buena = interpretarTicket('LECHE 0,85\nPAN 1,00\nTOTAL 1,85', HOY)
+    const mala = interpretarTicket('LECHE 0,85\nPAN 7,00\nGOMA 1,00\nTOTAL 1,85', HOY)
+    expect(cuadraTicket(buena)).toBe(true)
+    expect(calidadLectura(buena)).toBeGreaterThan(calidadLectura(mala))
   })
 })
 

@@ -75,8 +75,6 @@ export async function unirseConInvitacion(codigo: string, clavePersonal: string,
   await escribirConfig('hogarId', datos.h)
   await escribirConfig('dispositivoId', dispositivoId)
   await escribirConfig('rol', rol)
-  // Los datos llegan por sincronización: este móvil no debe crear un periodo vacío antes de recibirlos.
-  await escribirConfig('unidoPorInvitacion', '1')
   return { claveHogar: await importarClaveHogar(raw), hogarId: datos.h, dispositivoId, rol }
 }
 

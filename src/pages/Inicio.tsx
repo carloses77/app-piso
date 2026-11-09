@@ -2,6 +2,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip
 import { LayoutDashboard, Scale, Wallet, Car, Sparkles, CalendarClock, RefreshCw } from 'lucide-react'
 import { useDatosPeriodo } from '../hooks/useDatos'
 import { useAlias, useSesion } from '../hooks/useSesion'
+import { useBotonSync } from '../hooks/useBotonSync'
 import { calcularSaldo, gastosPorTipo, conteoParkingMes, mesActual, eur, ZONAS, turnoSemana, lunesIso } from '../logica/calculos'
 import { Avatar, Cabecera, ICONO_PAGO, TarjetaKPI, colorUsuario } from '../components/comunes'
 import { db, type TipoPago } from '../db'
@@ -16,7 +17,8 @@ import { puntosLimpieza } from '../logica/calculos'
 export default function Inicio({ ir }: { ir: (s: string) => void }) {
   const d = useDatosPeriodo()
   const alias = useAlias()
-  const { sesion, estadoSync, sincronizarYa } = useSesion()
+  const { sesion } = useSesion()
+  const { sincronizarAhora, girando } = useBotonSync()
   const ausencias = useAusencias()
   const compra = useLiveQuery(() => db.compra.toArray(), []) ?? []
   const recurrentes = useLiveQuery(() => db.recurrentes.toArray(), []) ?? []
@@ -52,8 +54,8 @@ export default function Inicio({ ir }: { ir: (s: string) => void }) {
   return (
     <div>
       <Cabecera titulo={`Hola, ${alias[yo]}`} icono={LayoutDashboard}
-        extra={<button onClick={sincronizarYa} aria-label="Sincronizar" className="boton size-11 bg-superficie p-0">
-          <RefreshCw size={18} className={estadoSync === 'sincronizando' ? 'animate-spin' : ''} />
+        extra={<button onClick={sincronizarAhora} disabled={girando} aria-label="Sincronizar" className="boton size-11 bg-superficie p-0">
+          <RefreshCw size={18} className={girando ? 'animate-spin' : ''} />
         </button>} />
 
       {/* Balance principal */}

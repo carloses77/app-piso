@@ -3,7 +3,6 @@ import { motion } from 'motion/react'
 import { LayoutDashboard, Wallet, Landmark, Sparkles, Car, Settings, type LucideIcon } from 'lucide-react'
 import { ProveedorSesion, useSesion } from './hooks/useSesion'
 import { asegurarPeriodo } from './db/operaciones'
-import { leerConfig } from './db'
 import { generarRecurrentes } from './logica/recurrentes'
 import { ProveedorToasts, useTema, vibrar } from './hooks/useAvisos'
 import { relayDisponible } from './sync/relay'
@@ -29,11 +28,10 @@ function Contenido() {
   const [actual, setActual] = useState('inicio')
 
   useEffect(() => {
-    // Quien se une con invitación espera a recibir el periodo; sin servidor, cada móvil crea el suyo.
-    if (!sesion) return
+    // Con servidor, el periodo y los pagos fijos se generan tras sincronizar (useSesion) para no pisar datos del otro móvil.
+    if (!sesion || relayDisponible()) return
     ;(async () => {
-      const unido = (await leerConfig('unidoPorInvitacion')) === '1'
-      if ((sesion.rol === 'A' && !unido) || !relayDisponible()) await asegurarPeriodo()
+      await asegurarPeriodo()
       await generarRecurrentes()
     })()
   }, [sesion])

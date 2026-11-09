@@ -155,7 +155,7 @@ export default function Pagos() {
                 <motion.li key={p.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -40, transition: { duration: 0.15 } }}
                   transition={{ duration: 0.18 }} className={`tarjeta flex items-center gap-3 !p-3 ${p.saldado ? 'opacity-55' : ''}`}>
                   <button className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl" style={{ background: info.color + '1f', color: info.color }}
-                    onClick={() => p.foto && setVerTicket(p)} aria-label={p.foto ? 'Ver ticket' : info.nombre}>
+                    onClick={() => setVerTicket(p)} disabled={!p.foto} aria-label={p.foto ? 'Ver ticket' : info.nombre}>
                     {p.foto ? <img src={p.foto} alt="" className="size-full object-cover" /> : <info.icono size={22} />}
                     {p.recurrenteId && <Repeat size={11} className="absolute right-0.5 bottom-0.5 rounded-full bg-superficie p-0.5" />}
                   </button>
@@ -268,7 +268,7 @@ export default function Pagos() {
                 {verTicket.totalTicket !== undefined && <div className="text-xs text-tinta/50">Total del ticket: {eur(verTicket.totalTicket)}</div>}
               </div>
             )}
-            <button className="boton absolute top-[calc(env(safe-area-inset-top)+12px)] right-4 size-11 bg-white/15 p-0 text-white" aria-label="Cerrar"><X /></button>
+            <button className="boton absolute top-[calc(env(safe-area-inset-top)+12px)] right-4 size-11 bg-white/15 p-0 text-white" aria-label="Cerrar" onClick={() => setVerTicket(undefined)}><X /></button>
           </motion.div>
         )}
       </AnimatePresence>

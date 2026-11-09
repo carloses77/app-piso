@@ -6,6 +6,9 @@ export const obtenerUsuario = () => usuarioActual
 
 const tabla = (t: TablaSync) => db.table(t)
 
+/** Una edición siempre gana a lo que ya había, aunque el reloj del otro móvil vaya adelantado. */
+const marcaTiempo = (existe?: { actualizado: number }) => Math.max(Date.now(), (existe?.actualizado ?? 0) + 1)
+
 /** Guarda un registro, deja rastro en el histórico y lo encola para sincronizar. */
 export async function guardar<T extends { id?: string } & Record<string, unknown>>(
   t: TablaSync,
@@ -14,7 +17,7 @@ export async function guardar<T extends { id?: string } & Record<string, unknown
 ): Promise<string> {
   const id = datos.id ?? nuevoId()
   const existe = datos.id ? await tabla(t).get(id) : undefined
-  const registro = { ...existe, ...datos, id, actualizado: Date.now() }
+  const registro = { ...existe, ...datos, id, actualizado: marcaTiempo(existe) }
   const historial: Historial = {
     fecha: registro.actualizado,
     entidad: t,
@@ -33,7 +36,7 @@ export async function guardar<T extends { id?: string } & Record<string, unknown
 export async function borrar(t: TablaSync, id: string, resumen: string) {
   const existe = await tabla(t).get(id)
   if (!existe) return
-  const registro = { ...existe, borrado: true, actualizado: Date.now() }
+  const registro = { ...existe, borrado: true, actualizado: marcaTiempo(existe) }
   const historial: Historial = { fecha: registro.actualizado, entidad: t, accion: 'borrar', usuario: usuarioActual, resumen }
   await db.transaction('rw', [tabla(t), db.historial, db.colaSync], async () => {
     await tabla(t).put(registro)

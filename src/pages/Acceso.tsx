@@ -11,7 +11,7 @@ import { registrarDispositivo } from '../sync/relay'
 import { useSesion } from '../hooks/useSesion'
 import { useToast, vibrar } from '../hooks/useAvisos'
 import { guardar, fijarUsuario, asegurarPeriodo } from '../db/operaciones'
-import { leerConfig } from '../db'
+import { db, leerConfig } from '../db'
 
 type Paso = 'cargando' | 'bienvenida' | 'invitacion' | 'claveInicial' | 'confirmar' | 'perfil' | 'bloqueo' | 'recuperar' | 'ofrecerBio'
 const PASOS_ALTA: Paso[] = ['claveInicial', 'confirmar', 'perfil']
@@ -80,7 +80,7 @@ export default function Acceso() {
       if (await estaConfigurado()) {
         setConBio(await biometriaActiva())
         const yo = await leerConfig('rol')
-        const fila = yo ? await import('../db').then(({ db }) => db.ajustes.get(`alias-${yo}`)) : undefined
+        const fila = yo ? await db.ajustes.get(`alias-${yo}`) : undefined
         setAliasGuardado(fila?.valor ?? '')
         setPaso('bloqueo')
       } else if (codigo) {
@@ -147,6 +147,8 @@ export default function Acceso() {
       vibrar([15, 50, 15])
       await entrarOfreciendoBio(s, clave, alias.trim())
     } catch (err) {
+      // Si el servidor rechaza el móvil no debe quedar a medio configurar: podría entrar sin sincronizar nunca.
+      if (modo === 'unirse') await db.config.clear()
       fallo((err as Error).message)
     } finally {
       setOcupado(false)
