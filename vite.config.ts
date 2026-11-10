@@ -15,6 +15,8 @@ export default defineConfig({
         importScripts: ['sw-push.js'],
         // El OCR pesa varios MB: se descarga la primera vez que hace falta y luego funciona sin conexión.
         globIgnores: ['ocr/**'],
+        // .mjs incluido: el worker del lector de PDF debe quedar en caché con el resto de la versión.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,webmanifest,wasm}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [{
           urlPattern: ({ url }) => url.pathname.includes('/ocr/'),

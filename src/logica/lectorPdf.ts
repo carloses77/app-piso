@@ -1,6 +1,7 @@
 // Lectura local del PDF: usa el texto del documento y recurre al OCR solo en páginas escaneadas.
 // Nada sale del dispositivo: todos los recursos se sirven desde la propia app (public/ocr).
 import type { Celda, LineaPdf } from './banco'
+import { importarSeguro } from './cargaModulo'
 
 const RECURSOS = `${import.meta.env.BASE_URL}ocr`
 const MIN_CARACTERES_PAGINA = 40
@@ -9,10 +10,10 @@ const ESCALA_OCR = 2.5
 export interface Progreso { texto: string; porcentaje: number }
 
 async function cargarPdfjs() {
-  const [pdfjs, worker] = await Promise.all([
+  const [pdfjs, worker] = await importarSeguro(() => Promise.all([
     import('pdfjs-dist/legacy/build/pdf.mjs'),
     import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
-  ])
+  ]))
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default
   return pdfjs
 }
@@ -71,7 +72,7 @@ async function lineasDeTexto(pagina: PaginaPdf, desplazamiento: number) {
 type TrabajadorOcr = Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>>
 
 export async function crearOcr(logger?: (m: { status: string; progress: number }) => void): Promise<TrabajadorOcr> {
-  const { createWorker, OEM } = await import('tesseract.js')
+  const { createWorker, OEM } = await importarSeguro(() => import('tesseract.js'))
   return createWorker('spa', OEM.LSTM_ONLY, {
     workerPath: `${RECURSOS}/worker.min.js`,
     corePath: RECURSOS,
