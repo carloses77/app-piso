@@ -1,5 +1,6 @@
 // Gestión de la clave personal, el hogar y el emparejamiento entre los 2 dispositivos.
 import { db, leerConfig, escribirConfig, type Usuario } from '../db'
+import { activarCifradoLocal, cifrarRegistrosAntiguos } from '../db/cifradoLocal'
 import { aBase64, deBase64, aleatorio, cifrarBytes, descifrarBytes, derivarClave, generarClaveHogar, importarClaveHogar } from './index'
 
 export interface Sesion { claveHogar: CryptoKey; hogarId: string; dispositivoId: string; rol: Usuario }
@@ -34,8 +35,17 @@ async function protegerRecuperacion(raw: Uint8Array, claveInicial: string) {
   await escribirConfig('claveHogarRec', await cifrarBytes(k, raw))
 }
 
+/** Prepara el cifrado de los datos del móvil; la primera vez convierte los registros que estaban en claro. */
+async function prepararDatosLocales(raw: Uint8Array) {
+  await activarCifradoLocal(raw)
+  if ((await leerConfig('datosCifrados')) === '1') return
+  await cifrarRegistrosAntiguos(db)
+  await escribirConfig('datosCifrados', '1')
+}
+
 export async function crearHogar(clavePersonal: string, claveInicial: string): Promise<Sesion> {
   const raw = generarClaveHogar()
+  await prepararDatosLocales(raw)
   const hogarId = aBase64(aleatorio(16))
   const dispositivoId = aBase64(aleatorio(16))
   await protegerClaveHogar(raw, clavePersonal)
@@ -69,6 +79,7 @@ export function leerInvitacion(codigo: string) {
 export async function unirseConInvitacion(codigo: string, clavePersonal: string, claveInicial: string, rol: Usuario = 'B'): Promise<Sesion> {
   const datos = leerInvitacion(codigo)
   const raw = deBase64(datos.k)
+  await prepararDatosLocales(raw)
   const dispositivoId = aBase64(aleatorio(16))
   await protegerClaveHogar(raw, clavePersonal)
   await protegerRecuperacion(raw, claveInicial)
@@ -95,6 +106,7 @@ export async function esperaPendiente() {
 }
 
 export async function sesionDesdeRaw(raw: Uint8Array): Promise<Sesion> {
+  await prepararDatosLocales(raw)
   return {
     claveHogar: await importarClaveHogar(raw),
     hogarId: (await leerConfig('hogarId'))!,

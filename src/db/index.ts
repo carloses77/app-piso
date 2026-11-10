@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import { usarCifradoLocal } from './cifradoLocal'
 
 export type Usuario = 'A' | 'B'
 export type TipoPago = 'renta' | 'luz' | 'agua' | 'gas' | 'internet' | 'comunidad' | 'otro'
@@ -90,6 +91,7 @@ export class BaseDatos extends Dexie {
       movimientos: 'id, extractoId, fecha',
       trozosPdf: 'id, extractoId',
     })
+    usarCifradoLocal(this)
   }
 }
 

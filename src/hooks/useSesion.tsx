@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { olvidarCifradoLocal } from '../db/cifradoLocal'
 import type { Sesion } from '../cripto/sesion'
 import { asegurarPeriodo, fijarUsuario } from '../db/operaciones'
 import { generarRecurrentes } from '../logica/recurrentes'
 import { activarPush, sincronizar, type ResultadoSync } from '../sync/relay'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Usuario } from '../db'
+import { db, escribirConfig, type Usuario } from '../db'
 
 interface Ctx {
   sesion: Sesion | null
@@ -31,9 +32,11 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   const temporizador = useRef<number>(0)
   const recurrentesDe = useRef<Sesion | null>(null)
 
-  const bloquear = useCallback(() => setSesion(null), [])
+  const bloquear = useCallback(() => { olvidarCifradoLocal(); setSesion(null) }, [])
   const entrar = (s: Sesion) => {
     fijarUsuario(s.rol)
+    // Copia del apodo para el saludo de la pantalla de acceso, que se muestra antes de poder descifrar.
+    db.ajustes.get(`alias-${s.rol}`).then((f) => f?.valor && escribirConfig('aliasAcceso', f.valor)).catch(() => undefined)
     setSesion(s)
   }
 

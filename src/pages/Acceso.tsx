@@ -80,8 +80,9 @@ export default function Acceso() {
       if (await estaConfigurado()) {
         setConBio(await biometriaActiva())
         const yo = await leerConfig('rol')
-        const fila = yo ? await db.ajustes.get(`alias-${yo}`) : undefined
-        setAliasGuardado(fila?.valor ?? '')
+        // El apodo se guarda aparte y sin cifrar (es un mote, sin datos reales) para saludar antes de desbloquear.
+        const fila = yo ? await db.ajustes.get(`alias-${yo}`).catch(() => undefined) : undefined
+        setAliasGuardado((await leerConfig('aliasAcceso')) ?? fila?.valor ?? '')
         setPaso('bloqueo')
       } else if (codigo) {
         setModo('unirse')

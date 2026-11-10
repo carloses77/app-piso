@@ -28,7 +28,8 @@ export async function abrirPdf(datos: Uint8Array) {
     }).promise
   } catch (e) {
     if ((e as Error).name === 'PasswordException') throw new Error('El PDF tiene contraseña. Descárgalo sin protección y vuelve a subirlo.')
-    throw new Error('No se ha podido abrir el archivo como PDF.')
+    // El detalle técnico ayuda a saber si es el archivo o el navegador del móvil.
+    throw new Error(`No se ha podido abrir el archivo como PDF (${(e as Error).name}: ${(e as Error).message}).`)
   }
 }
 

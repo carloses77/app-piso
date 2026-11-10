@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@noble/ciphers": "^2.0.1",
     "@supabase/supabase-js": "^2.118.0",
     "@tesseract.js-data/spa": "^1.0.0",
     "dexie": "^4.4.6",

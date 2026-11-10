@@ -75,7 +75,12 @@ async function prepararEvento(s: Sesion, ev: EventoCola) {
 }
 
 const esRed = (m: string) => /fetch|network|load failed|timeout/i.test(m)
-const fallo = (r: ResultadoSync, m: string): ResultadoSync => (esRed(m) ? { ...r, estado: 'offline' } : { ...r, estado: 'error', detalle: m })
+const LIMITES: Record<string, string> = {
+  LIMITE_RITMO: 'demasiados cambios seguidos; se reintentará en unos minutos',
+  LIMITE_ESPACIO: 'el piso ha llenado su espacio en el servidor',
+}
+const traducir = (m: string) => Object.entries(LIMITES).find(([k]) => m.includes(k))?.[1] ?? m
+const fallo = (r: ResultadoSync, m: string): ResultadoSync => (esRed(m) ? { ...r, estado: 'offline' } : { ...r, estado: 'error', detalle: traducir(m) })
 
 /** Vuelve a dar de alta el móvil si el servidor no lo reconoce. Devuelve el fallo si no lo consigue. */
 async function recuperarRegistro(s: Sesion): Promise<EstadoSync | null> {
@@ -83,7 +88,9 @@ async function recuperarRegistro(s: Sesion): Promise<EstadoSync | null> {
     await registrarDispositivo(s)
     return null
   } catch (e) {
-    return (e as Error).message.includes('2 dispositivos') ? 'limite' : 'no-autorizado'
+    const m = (e as Error).message
+    if (m.includes('LIMITE_RITMO')) return 'error'
+    return m.includes('2 dispositivos') ? 'limite' : 'no-autorizado'
   }
 }
 
