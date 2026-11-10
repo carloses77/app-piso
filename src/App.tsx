@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { LayoutDashboard, Wallet, Landmark, Sparkles, Car, Settings, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Wallet, Landmark, Sparkles, Car, Settings, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { ProveedorSesion, useSesion } from './hooks/useSesion'
 import { asegurarPeriodo } from './db/operaciones'
 import { generarRecurrentes } from './logica/recurrentes'
@@ -23,6 +23,25 @@ const SECCIONES: { id: string; texto: string; icono: LucideIcon; Vista: (p: { ir
   { id: 'mas', texto: 'Más', icono: Settings, Vista: Mas },
 ]
 
+const AVISO_SYNC: Record<string, string> = {
+  'sin-relay': 'Sin servidor: los cambios se quedan en este móvil y el otro no los verá.',
+  'no-autorizado': 'El servidor no reconoce este móvil. Vuelve a unirte con una invitación.',
+  limite: 'El piso ya tiene 2 móviles: este no puede compartir cambios.',
+}
+
+/** Aviso fijo cuando este móvil no puede compartir cambios (no se muestra por falta de internet, que se reintenta sola). */
+function AvisoSync() {
+  const { estadoSync } = useSesion()
+  const texto = !relayDisponible() ? AVISO_SYNC['sin-relay'] : AVISO_SYNC[estadoSync]
+  if (!texto) return null
+  return (
+    <div role="alert" className="mx-auto mt-[max(0.75rem,env(safe-area-inset-top))] mb-1 flex max-w-lg items-start gap-2 rounded-2xl border border-a/40 bg-a/15 px-3 py-2 text-sm font-medium">
+      <TriangleAlert size={18} className="mt-0.5 shrink-0 text-a" />
+      <span>{texto}</span>
+    </div>
+  )
+}
+
 function Contenido() {
   const { sesion } = useSesion()
   const [actual, setActual] = useState('inicio')
@@ -44,6 +63,7 @@ function Contenido() {
   return (
     <>
       <main className="pb-seguro mx-auto max-w-lg px-4">
+        <AvisoSync />
         <motion.div key={actual} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <Vista ir={setActual} />
         </motion.div>
