@@ -5,7 +5,7 @@ import {
   crearHogar, desbloquear, estaConfigurado, unirseConInvitacion, leerInvitacion, generarClaveInicial,
   normalizarClaveInicial, recuperarConClaveInicial, sesionDesdeRaw, borrarTodoLocal, abrirClaveHogarRaw,
 } from '../cripto/sesion'
-import { activarBiometria, biometriaActiva, biometriaDisponible, desbloquearConBiometria } from '../cripto/biometria'
+import { activarBiometria, biometriaActiva, biometriaDisponible, desbloquearConBiometria, desactivarBiometria } from '../cripto/biometria'
 import type { Sesion } from '../cripto/sesion'
 import { registrarDispositivo } from '../sync/relay'
 import { useSesion } from '../hooks/useSesion'
@@ -166,6 +166,12 @@ export default function Acceso() {
   async function abrirBio(automatico = false) {
     setError('')
     try { entrar(await sesionDesdeRaw(await desbloquearConBiometria())) } catch (err) {
+      // Llave antigua sin PRF (Android): se retira para que, al entrar con la clave, se ofrezca crear una compatible.
+      if ((err as Error).message.includes('desbloqueo biométrico seguro')) {
+        await desactivarBiometria()
+        setConBio(false)
+        return fallo('La huella guardada no era compatible. Entra con tu clave y vuelve a activarla.')
+      }
       // al lanzarse sola, una cancelación o un bloqueo del navegador no es un error para el usuario
       if (!automatico) fallo((err as Error).message)
     }
